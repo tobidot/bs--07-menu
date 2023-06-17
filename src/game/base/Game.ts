@@ -2,45 +2,48 @@ import { GameController } from "../controllers/GameController";
 import { GameModel } from "../models/GameModel";
 import { GameView } from "../views/GameView";
 import * as tgt from "../../library/index";
+import { registerAssets } from "./Assets";
 
-export class Game {
+export class Game extends tgt.GameTemplate<
+    GameModel,
+    GameView,
+    GameController
+> {
 
-    public controller: GameController;
-    public view: GameView;
-    public model: GameModel;
-    public last_time_ms: number = 0;
-    public on_game_finished: null|(() => void) = null;
+    public on_game_finished: null | (() => void) = null;
 
     public constructor(app: HTMLElement) {
-        const canvas = tgt.getElementByQuerySelector(app, "canvas", HTMLCanvasElement);
-        const context = canvas.getContext("2d");
-        tgt.assertNotNull(context, "No 2d context found");
-        this.view = new GameView(context);
-        this.model = new GameModel();
+        super(app);
+    }
+
+    /**
+     * Create the Initial Model View and Controller
+     * @param context 
+     * @returns 
+     */
+    protected initMvc(context: CanvasRenderingContext2D): this {
+        this.model = new GameModel(context);
         this.controller = new GameController(this.model);
+        this.view = new GameView(context);
+        return this;
     }
 
-    protected update(delta_ms: number) {
-        this.controller.update(delta_ms);
-        this.view.update(delta_ms);
-        this.view.render(this.model);
+    /**
+     * Register the required Assets
+     * @param assets 
+     */
+    protected registerAssets(assets: tgt.AssetManager): void {
+        registerAssets(assets);
     }
 
-    protected onFrame = (timestamp_ms: number) =>  {
-        this.update(timestamp_ms - this.last_time_ms);
-        this.last_time_ms = timestamp_ms;
-        if (this.controller.isGameOver()) {
-            if(this.on_game_finished) this.on_game_finished();
-        } else {
-            requestAnimationFrame(this.onFrame);
-        }
-    }
-
-    public async run() {
-        return new Promise<void>((resolve, reject) => {
-            this.on_game_finished = resolve;
-            this.controller.newGame();
-            requestAnimationFrame(this.onFrame);
-        });
+    /**
+     * Prepare for a new Game
+     * @param resolve 
+     * @param reject 
+     */
+    protected newGame(
+        resolve: () => void,
+        reject: (reason?: any) => void
+    ): void {
     }
 }
